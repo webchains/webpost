@@ -73,13 +73,9 @@ class Main {
         this.MESSAGE_TYPE = {
             beat: 'BEAT',
             update: 'UPDATE',
-            deUpdate: 'DEUPDATE',
             admin: 'ADMIN',
-            deAdmin: 'DEADMIN',
             mod: 'MOD',
-            deMod: 'DEMOD',
             ban: 'BAN',
-            deBan: 'DEBAN',
             post: 'POST',
             reply: 'REPLY',
             interests: 'INTERESTS',
@@ -527,7 +523,7 @@ class Main {
                 let newPost = {timestamp: Date.now(), postid: md5(this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex') + post.id), user: this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex'), userid: md5(this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex')), text: text, media: media, size: size};
                 post.replies.push(newPost);
                 post.save();
-                this.broadcastReply({peer: this.address, id: post._id, posts: newPost});
+                this.broadcastReply({peer: this.address, id: post._id, reply: newPost});
                 return res.status(200).json(newPost);
             } else {
                 return res.status(400).json('error');
@@ -607,22 +603,22 @@ class Main {
                 }
             }
         
-            this.checkPosts = async (posts) => {
-                if(!posts.posts.media){
+            this.checkReply = async (posts) => {
+                if(!posts.reply.media){
                     let newPost = await this.getPost(posts.id);
                     if(newPost){
-                        newPost.replies.push(posts.posts);
+                        newPost.replies.push(posts.reply);
                         newPost.save();
                     }
-                } else if(posts.posts.media && posts.posts.size < this.sizeLimit){
+                } else if(posts.reply.media && posts.posts.size < this.sizeLimit){
                     let newPost = await this.getPost(posts.id);
                     if(newPost){
-                        newPost.replies.push(posts.posts);
+                        newPost.replies.push(posts.reply);
                         newPost.save();
                         // if(newPost.media){
                         //     this.downFiles(posts.posts.media, posts.peer);
                         // }
-                        this.downFiles(posts.posts.media, posts.peer);
+                        this.downFiles(posts.reply.media, posts.peer);
                     }
                 }
             }
@@ -651,22 +647,22 @@ class Main {
                 }
             }
         
-            this.checkPosts = async (posts) => {
-                if(!posts.posts.media){
+            this.checkReply = async (posts) => {
+                if(!posts.reply.media){
                     let newPost = await this.getPost(posts.id);
                     if(newPost){
-                        newPost.replies.push(posts.posts);
+                        newPost.replies.push(posts.reply);
                         newPost.save();
                     }
-                } else if(posts.posts.media && posts.posts.size < this.sizeLimit){
+                } else if(posts.reply.media && posts.posts.size < this.sizeLimit){
                     let newPost = await this.getPost(posts.id);
                     if(newPost){
-                        newPost.replies.push(posts.posts);
+                        newPost.replies.push(posts.reply);
                         newPost.save();
                         // if(newPost.media){
                         //     this.downFiles(posts.posts.media, posts.peer);
                         // }
-                        this.downFiles(posts.posts.media, posts.peer);
+                        this.downFiles(posts.reply.media, posts.peer);
                     }
                 }
             }
@@ -684,18 +680,22 @@ class Main {
             this.checkPost = async (post) => {
                 await this.postDB(post.post);
                 // let newPost = await this.postDB(post.post);
-                this.downFiles(post.post.media, post.peer);
+                if(post.post.media){
+                    this.downFiles(post.post.media, post.peer);
+                }
             }
         
-            this.checkPosts = async (posts) => {
+            this.checkReply = async (posts) => {
                 let newPost = await this.getPost(posts.id);
                 if(newPost){
-                    newPost.replies.push(posts.posts);
+                    newPost.replies.push(posts.reply);
                     newPost.save();
                     // if(newPost.media){
                     //     this.downFiles(posts.posts.media, posts.peer);
                     // }
-                    this.downFiles(posts.posts.media, posts.peer);
+                    if(posts.reply.media){
+                        this.downFiles(posts.reply.media, posts.peer);
+                    }
                 }
             }
         }
@@ -1170,9 +1170,9 @@ class Main {
                     // send the data to checkPeer() function to handle the data
                     this.checkMod(data.mod);
                     break;
-                case this.MESSAGE_TYPE.posts:
+                case this.MESSAGE_TYPE.reply:
                     // send the data to checkPeer() function to handle the data
-                    await this.checkPosts(data.posts);
+                    await this.checkReply(data.reply);
                     break;
                 case this.MESSAGE_TYPE.interests:
                     // send the data to checkPeer() function to handle the data
@@ -1229,7 +1229,7 @@ class Main {
     //     }
     // }
 
-    // async checkPosts(posts){
+    // async checkReply(posts){
     //     let newPost = await this.getPost(posts.id);
     //     if(newPost){
     //         newPost.replies.push(posts.posts);
