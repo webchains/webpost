@@ -20,6 +20,7 @@ const Category = require('./Category.js');
 const EC = require('elliptic').ec;
 const nanoid = require('nanoid');
 const URL = require('url');
+const path = require('path');
 
 class Main {
     constructor(checksum){
@@ -36,6 +37,10 @@ class Main {
             this.bans = [];
         } else if(this.type === 'closed'){
             this.mods = [];
+        }
+        this.index = process.env.INDEX;
+        if(this.index === 'redirect'){
+            this.redirect = process.env.REDIRECT;
         }
         this.updates = [];
         this.name = process.env.NAME;
@@ -54,7 +59,7 @@ class Main {
             this.certificate = {cert: process.env.CERTFILE, key: process.env.CERTKEY};
         }
         this.server = null;
-        // this.heartbeat = Number(process.env.HEARTBEAT);
+        this.heartbeat = Number(process.env.HEARTBEAT);
         // if(this.heartbeat){
         //     this.beats = [];
         // }
@@ -67,7 +72,6 @@ class Main {
 
         this.MESSAGE_TYPE = {
             beat: 'BEAT',
-            peer: 'PEER',
             update: 'UPDATE',
             deUpdate: 'DEUPDATE',
             admin: 'ADMIN',
@@ -77,7 +81,7 @@ class Main {
             ban: 'BAN',
             deBan: 'DEBAN',
             post: 'POST',
-            posts: 'POSTS',
+            reply: 'REPLY',
             interests: 'INTERESTS',
             category: 'CATEGORY'
         };
@@ -213,10 +217,21 @@ class Main {
             }).single('media');
         }
 
-        this.app.get('/', (req, res) => {
-            // return res.sendFile(path.resolve(__dirname + '../base/dist/index.html')); // potential update
-            return res.status(200).json('webchains');
-        });
+        if(this.index === 'html'){
+            this.app.get('/', (req, res) => {
+                return res.sendFile(path.resolve(__dirname, '../base/dist/index.html')); // potential update
+                // return res.status(200).json('webcoin');
+            });
+        } else if(this.index === 'standard'){
+            this.app.get('/', (req, res) => {
+                // return res.sendFile(path.resolve(__dirname + '../base/dist/index.html')); // potential update
+                return res.status(200).json('webcoin');
+            });
+        } else if(this.index === 'redirect'){
+            this.app.get('/', (req, res) => {
+                return res.redirect(this.redirect);
+            });
+        }
         this.app.get('/updates', (req, res) => {
             return res.status(200).json(this.updates);
         });
@@ -224,7 +239,7 @@ class Main {
             if(!req.body.main || !req.body.checksum || this.genesisAddress !== this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex') || this.updates.includes(req.body.checksum)){
                 return res.status(400).json('error');
             } else {
-                this.broadcastUpdate(req.body.checksum);
+                this.broadcastUpdate({type: 'update', update: req.body.checksum});
                 this.updates.push(req.body.checksum);
                 return res.status(200).json('success');
             }
@@ -233,7 +248,7 @@ class Main {
             if(!req.body.main || !req.body.checksum || this.genesisAddress !== this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex') || !this.updates.includes(req.body.checksum)){
                 return res.status(400).json('error');
             } else {
-                this.broadcastDeUpdate(req.body.checksum);
+                this.broadcastUpdate({type: 'deupdate', update: req.body.checksum});
                 this.updates = this.updates.filter(e => {return e !== req.body.checksum});
                 return res.status(200).json('success');
             }
@@ -302,7 +317,7 @@ class Main {
                     return res.status(400).json('error');
                 } else {
                     this.blockchain.mods.push(req.body.address);
-                    this.broadcastMod(req.body.address);
+                    this.broadcastMod({type: 'mod', mod: req.body.address});
                     return res.status(200).json(req.body.address + ' was added as an admin');
                 }
             });
@@ -313,7 +328,7 @@ class Main {
                     let addressIndex = this.blockchain.mods.indexOf(req.body.address);
                     if(addressIndex !== -1){
                         this.blockchain.mods.splice(addressIndex, 1);
-                        this.broadcastDeMod(req.body.address);
+                        this.broadcastMod({type: 'demod', mod: req.body.address});
                         return res.status(200).json(req.body.address + ' is removed from admins');
                     } else {
                         return res.status(200).json(req.body.address + ' is not an admin');
@@ -329,7 +344,7 @@ class Main {
                     return res.status(400).json('error');
                 } else {
                     this.blockchain.bans.push(req.body.address);
-                    this.broadcastBan(req.body.address);
+                    this.broadcastBan({type: 'ban', ban: req.body.address});
                     return res.status(200).json(req.body.address + ' was added to the bans');
                 }
             });
@@ -340,7 +355,7 @@ class Main {
                     let addressIndex = this.blockchain.bans.indexOf(req.body.address);
                     if(addressIndex !== -1){
                         this.blockchain.bans.splice(addressIndex, 1);
-                        this.broadcastDeBan(req.body.address);
+                        this.broadcastBan({type: 'deban', ban: req.body.address});
                         return res.status(200).json(req.body.address + ' is removed from bans');
                     } else {
                         return res.status(200).json(req.body.address + ' is not in bans');
@@ -356,7 +371,7 @@ class Main {
                     return res.status(400).json('error');
                 } else {
                     this.blockchain.admins.push(req.body.address);
-                    this.broadcastAdmin(req.body.address);
+                    this.broadcastAdmin({type: 'admin', admin: req.body.address});
                     return res.status(200).json(req.body.address + ' was added as an admin');
                 }
             });
@@ -367,7 +382,7 @@ class Main {
                     let addressIndex = this.blockchain.admins.indexOf(req.body.address);
                     if(addressIndex !== -1){
                         this.blockchain.admins.splice(addressIndex, 1);
-                        this.broadcastDeAdmin(req.body.address);
+                        this.broadcastAdmin({type: 'deadmin', admin: req.body.address});
                         return res.status(200).json(req.body.address + ' is removed from admins');
                     } else {
                         return res.status(200).json(req.body.address + ' is not an admin');
@@ -382,7 +397,7 @@ class Main {
                     return res.status(400).json('error');
                 } else {
                     this.blockchain.mods.push(req.body.address);
-                    this.broadcastMod(req.body.address);
+                    this.broadcastMod({type: 'mod', mod: req.body.address});
                     return res.status(200).json(req.body.address + ' was added as an admin');
                 }
             });
@@ -393,7 +408,7 @@ class Main {
                     let addressIndex = this.blockchain.mods.indexOf(req.body.address);
                     if(addressIndex !== -1){
                         this.blockchain.mods.splice(addressIndex, 1);
-                        this.broadcastDeMod(req.body.address);
+                        this.broadcastMod({type: 'demod', mod: req.body.address});
                         return res.status(200).json(req.body.address + ' is removed from admins');
                     } else {
                         return res.status(200).json(req.body.address + ' is not an admin');
@@ -409,7 +424,7 @@ class Main {
                     return res.status(400).json('error');
                 } else {
                     this.blockchain.admins.push(req.body.address);
-                    this.broadcastAdmin(req.body.address);
+                    this.broadcastAdmin({type: 'admin', admin: req.body.address});
                     return res.status(200).json(req.body.address + ' was added as an admin');
                 }
             });
@@ -420,7 +435,7 @@ class Main {
                     let addressIndex = this.blockchain.admins.indexOf(req.body.address);
                     if(addressIndex !== -1){
                         this.blockchain.admins.splice(addressIndex, 1);
-                        this.broadcastDeAdmin(req.body.address);
+                        this.broadcastAdmin({type: 'deadmin', admin: req.body.address});
                         return res.status(200).json(req.body.address + ' is removed from admins');
                     } else {
                         return res.status(200).json(req.body.address + ' is not an admin');
@@ -435,7 +450,7 @@ class Main {
                     return res.status(400).json('error');
                 } else {
                     this.blockchain.bans.push(req.body.address);
-                    this.broadcastBan(req.body.address);
+                    this.broadcastBan({type: 'ban', ban: req.body.address});
                     return res.status(200).json(req.body.address + ' was added to the bans');
                 }
             });
@@ -446,7 +461,7 @@ class Main {
                     let addressIndex = this.blockchain.bans.indexOf(req.body.address);
                     if(addressIndex !== -1){
                         this.blockchain.bans.splice(addressIndex, 1);
-                        this.broadcastDeBan(req.body.address);
+                        this.broadcastBan({type: 'deban', ban: req.body.address});
                         return res.status(200).json(req.body.address + ' is removed from bans');
                     } else {
                         return res.status(200).json(req.body.address + ' is not in bans');
@@ -512,7 +527,7 @@ class Main {
                 let newPost = {timestamp: Date.now(), postid: md5(this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex') + post.id), user: this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex'), userid: md5(this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex')), text: text, media: media, size: size};
                 post.replies.push(newPost);
                 post.save();
-                this.broadcastPosts({peer: this.address, id: post._id, posts: newPost});
+                this.broadcastReply({peer: this.address, id: post._id, posts: newPost});
                 return res.status(200).json(newPost);
             } else {
                 return res.status(400).json('error');
@@ -830,29 +845,24 @@ class Main {
         // on any new connection the current instance will send the current chain
         // to the newly connected peer
         this.server.on('connection', (socket, req) => {
-            let url = new URL(req);
+            let url = new URL(this.address.wsurl + req.url);
             let address = {hash: url.searchParams.get('hash'), url: url.searchParams.get('url'), httpurl: url.searchParams.get('httpurl'), wsurl: url.searchParams.get('wsurl')};
-            // this.connectSocket(socket);
+            socket.address = address;
+            this.connectSocket(socket);
             console.log('socket connected to server');
-            socket.on('open', () => {
-                if(!address.url || !address.hash || !address.httpurl || !address.wsurl){
-                    socket.terminate();
-                } else {
-                    socket.address = address;
-                    this.connectSocket(socket);
-                }
-                // console.log('socket connected to server');
-            });
-            socket.on('error', error => {
-                console.log(error);
-                this.removeSocket(socket.address.hash);
-            });
-            socket.on('close', (code, reason) => {
-                console.log('peer disconnected', code, reason);
-                this.removeSocket(socket.address.hash);
-                // console.log('sockets length',this.sockets.length, this.sockets);
-                // socket.terminate();
-            });
+            // socket.on('open', () => {
+            //     // console.log('socket connected to server');
+            // });
+            // socket.on('error', error => {
+            //     console.log(error);
+            //     this.removeSocket(socket.address.hash);
+            // });
+            // socket.on('close', (code, reason) => {
+            //     console.log('peer disconnected', code, reason);
+            //     this.removeSocket(socket.address.hash);
+            //     // console.log('sockets length',this.sockets.length, this.sockets);
+            //     // socket.terminate();
+            // });
         });
 
         // event listener and callback for disconnections
@@ -882,19 +892,21 @@ class Main {
     connectNodePeer(peer){
             // create a socket for each peer
             let url = new URL(peer.wsurl);
-            url.set('url', peer.url);
-            url.set('hash', peer.hash);
-            url.set('httpurl', peer.httpurl);
-            url.set('wsurl', peer.wsurl);
+            url.set('url', this.address.url);
+            url.set('hash', this.address.hash);
+            url.set('httpurl', this.address.httpurl);
+            url.set('wsurl', this.address.wsurl);
             const socket = new WebSocket(url.href);
+            socket.address = peer;
             
             // open event listner is emitted when a connection is established
             // saving the socket in the array
             socket.on('open', async () => {
-                socket.address = peer;
                 await this.sendPost(socket);
                 this.broadcastPeer(peer);
                 this.connectSocket(socket);
+                this.sockets.push(socket);
+                console.log("Socket connected");
             });
             socket.on('error', error => {
                 console.log(error);
@@ -912,7 +924,7 @@ class Main {
     connectSocket(socket){
 
         let self = socket;
-        if(this.proxy){
+        if(this.heartbeat){
             self.beat = setInterval(() => {
                 // console.log('ran heartbeat');
                 // self.send(JSON.stringify("heartbeat"));
@@ -923,12 +935,6 @@ class Main {
             }, 30000);
         }
 
-
-        // push the socket too the socket array
-        this.sockets.push(socket);
-        console.log("Socket connected");
-
-
         // register a message event listener to the socket
         this.messageHandler(socket);
     }
@@ -937,17 +943,19 @@ class Main {
     connectOnlyPeer(peer){
             // create a socket for each peer
             let url = new URL(peer.wsurl);
-            url.set('url', peer.url);
-            url.set('hash', peer.hash);
-            url.set('httpurl', peer.httpurl);
-            url.set('wsurl', peer.wsurl);
+            url.set('url', this.address.url);
+            url.set('hash', this.address.hash);
+            url.set('httpurl', this.address.httpurl);
+            url.set('wsurl', this.address.wsurl);
             const socket = new WebSocket(peer.href);
+            socket.address = peer;
             
             // open event listner is emitted when a connection is established
             // saving the socket in the array
             socket.on('open', () => {
-                socket.address = peer;
                 this.connectSocket(socket);
+                this.sockets.push(socket);
+                console.log("Socket connected");
             });
             socket.on('error', error => {
                 console.log(error);
@@ -962,12 +970,25 @@ class Main {
     }
 
     removeSocket(peer){
+        this.server.clients.forEach(socket => {
+            if(socket.address.hash === peer || socket.address.url === peer || socket.address.httpurl === peer || socket.address.wsurl === peer){
+                if(this.socket[i].beat){
+                    clearInterval(this.socket[i].beat);
+                }
+                socket.close();
+                // socket.terminate();
+                console.log('removed peer from main broadcast');
+                return true;
+                // break;
+            }
+        });
         for(let i = 0; i < this.sockets.length; i++){
             if(this.sockets[i].address.hash === peer || this.sockets[i].address.url === peer || this.sockets[i].address.httpurl === peer || this.sockets[i].address.wsurl === peer){
                 if(this.socket[i].beat){
                     clearInterval(this.socket[i].beat);
                 }
-                this.sockets[i].terminate();
+                this.sockets[i].close();
+                // this.sockets[i].terminate();
                 this.sockets.splice(i, 1);
                 console.log('removed peer from main broadcast');
                 return true;
@@ -999,132 +1020,122 @@ class Main {
     }
 
     broadcastUpdate(update){
+        this.server.clients.forEach(socket => {
+            socket.send(JSON.stringify({
+                type: this.MESSAGE_TYPE.update,
+                update: update
+              }));
+        });
         this.sockets.forEach(socket => {
             socket.send(JSON.stringify({
                 type: this.MESSAGE_TYPE.update,
                 update: update
-              })
-          );
-        });
-    }
-
-    broadcastPeer(peer){
-        this.sockets.forEach(socket => {
-            socket.send(JSON.stringify({
-                type: this.MESSAGE_TYPE.peer,
-                peer: peer
-              })
-          );
-        });
-    }
-
-    broadcastDeUpdate(update){
-        this.sockets.forEach(socket => {
-            socket.send(JSON.stringify({
-                type: this.MESSAGE_TYPE.deUpdate,
-                update: update
-              })
-          );
+              }));
         });
     }
 
     broadcastAdmin(admin){
+        this.server.clients.forEach(socket => {
+            socket.send(JSON.stringify({
+                type: this.MESSAGE_TYPE.admin,
+                admin: admin
+              }));
+        });
         this.sockets.forEach(socket => {
             socket.send(JSON.stringify({
                 type: this.MESSAGE_TYPE.admin,
                 admin: admin
-              })
-          );
-        });
-    }
-
-    broadcastDeAdmin(deAdmin){
-        this.sockets.forEach(socket => {
-            socket.send(JSON.stringify({
-                type: this.MESSAGE_TYPE.deAdmin,
-                deAdmin: deAdmin
-              })
-          );
-        });
-    }
-
-    broadcastDeMod(deMod){
-        this.sockets.forEach(socket => {
-            socket.send(JSON.stringify({
-                type: this.MESSAGE_TYPE.deMod,
-                deMod: deMod
-              })
-          );
-        });
-    }
-
-    broadcastDeBan(deBan){
-        this.sockets.forEach(socket => {
-            socket.send(JSON.stringify({
-                type: this.MESSAGE_TYPE.deBan,
-                deBan: deBan
-              })
-          );
+              }));
         });
     }
 
     broadcastBan(ban){
+        this.server.clients.forEach(socket => {
+            socket.send(JSON.stringify({
+                type: this.MESSAGE_TYPE.ban,
+                ban: ban
+              }));
+        });
         this.sockets.forEach(socket => {
             socket.send(JSON.stringify({
                 type: this.MESSAGE_TYPE.ban,
                 ban: ban
-              })
-          );
+              }));
         });
     }
 
     broadcastMod(mod){
+        this.server.clients.forEach(socket => {
+            socket.send(JSON.stringify({
+                type: this.MESSAGE_TYPE.mod,
+                mod: mod
+              }));
+        });
         this.sockets.forEach(socket => {
             socket.send(JSON.stringify({
                 type: this.MESSAGE_TYPE.mod,
                 mod: mod
-              })
-          );
+              }));
         });
     }
 
     broadcastPost(post){
+        this.server.clients.forEach(socket => {
+            socket.send(JSON.stringify({
+                type: this.MESSAGE_TYPE.post,
+                post: post
+              }));
+        });
         this.sockets.forEach(socket => {
             socket.send(JSON.stringify({
                 type: this.MESSAGE_TYPE.post,
                 post: post
-              })
-          );
+              }));
         });
     }
 
-    broadcastPosts(posts){
+    broadcastReply(reply){
+        this.server.clients.forEach(socket => {
+            socket.send(JSON.stringify({
+                type: this.MESSAGE_TYPE.reply,
+                reply: reply
+              }));
+        });
         this.sockets.forEach(socket => {
             socket.send(JSON.stringify({
-                type: this.MESSAGE_TYPE.posts,
-                posts: posts
-              })
-          );
+                type: this.MESSAGE_TYPE.reply,
+                reply: reply
+              }));
         });
     }
 
     broadcastInterests(interests){
+        this.server.clients.forEach(socket => {
+            socket.send(JSON.stringify({
+                type: this.MESSAGE_TYPE.interests,
+                interests: interests
+              }));
+        });
         this.sockets.forEach(socket => {
             socket.send(JSON.stringify({
                 type: this.MESSAGE_TYPE.interests,
                 interests: interests
-              })
-          );
+              }));
         });
     }
 
     broadcastCategory(category){
+        this.server.clients.forEach(socket => {
+            socket.send(JSON.stringify({
+                type: this.MESSAGE_TYPE.category,
+                category: category
+              }));
+        });
         this.sockets.forEach(socket => {
             socket.send(JSON.stringify({
                 type: this.MESSAGE_TYPE.category,
                 category: category
-              })
-          );
+              }));
         });
     }
 
@@ -1139,10 +1150,6 @@ class Main {
                     // send the data to checkPeer() function to handle the data
                     this.checkAdmin(data.admin);
                     break;
-                case this.MESSAGE_TYPE.deAdmin:
-                    // send the data to checkPeer() function to handle the data
-                    this.checkDeAdmin(data.deAdmin);
-                    break;
                 case this.MESSAGE_TYPE.post:
                     // send the data to checkPeer() function to handle the data
                     await this.checkPost(data.post);
@@ -1150,10 +1157,6 @@ class Main {
                 case this.MESSAGE_TYPE.update:
                     // send the data to checkPeer() function to handle the data
                     this.checkUpdate(data.update);
-                    break;
-                case this.MESSAGE_TYPE.deUpdate:
-                    // send the data to checkPeer() function to handle the data
-                    this.checkDeUpdate(data.update);
                     break;
                 case this.MESSAGE_TYPE.beat:
                     // send the data to checkPeer() function to handle the data
@@ -1163,21 +1166,9 @@ class Main {
                     // send the data to checkPeer() function to handle the data
                     this.checkBan(data.ban);
                     break;
-                case this.MESSAGE_TYPE.peer:
-                    // send the data to checkPeer() function to handle the data
-                    this.checkPeer(data.peer);
-                    break;
                 case this.MESSAGE_TYPE.mod:
                     // send the data to checkPeer() function to handle the data
                     this.checkMod(data.mod);
-                    break;
-                case this.MESSAGE_TYPE.deBan:
-                    // send the data to checkPeer() function to handle the data
-                    this.checkDeBan(data.deBan);
-                    break;
-                case this.MESSAGE_TYPE.deMod:
-                    // send the data to checkPeer() function to handle the data
-                    this.checkDeMod(data.deMod);
                     break;
                 case this.MESSAGE_TYPE.posts:
                     // send the data to checkPeer() function to handle the data
@@ -1223,11 +1214,11 @@ class Main {
     }
 
     checkUpdate(update){
-        this.updates.push(update);
-    }
-
-    checkDeUpdate(update){
-        this.updates = this.updates.filter(e => {return e !== update});
+        if(update.type === 'update'){
+            this.updates.push(update.update);
+        } else if(update.type === 'deupdate'){
+            this.updates = this.updates.filter(e => {return e !== update.update});
+        }
     }
 
     // add transaction
@@ -1260,46 +1251,37 @@ class Main {
 
     // validate admin from peer
     checkAdmin(admin){
-        this.admins.push(admin);
-        console.log('from peer');
-    }
-
-    // remove an admin
-    checkDeAdmin(admin){
-        let iter = this.admins.indexOf(admin);
-        if(iter !== -1){
-            this.admins.splice(iter, 1);
-            console.log('from peer');
-        }
-    }
-
-    // remove an ban
-    checkDeBan(ban){
-        let iter = this.blockchain.bans.indexOf(ban);
-        if(iter !== -1){
-            this.blockchain.bans.splice(iter, 1);
-            console.log('from peer');
+        if(admin.type === 'admin'){
+            this.admins.push(admin.admin);
+        } else if(admin.type === 'deadmin'){
+            let iter = this.admins.indexOf(admin.admin);
+            if(iter !== -1){
+                this.admins.splice(iter, 1);
+            }
         }
     }
 
     // validate ban from peer
     checkBan(ban){
-        this.blockchain.bans.push(ban);
-        console.log('from peer');
+        if(ban.type === 'ban'){
+            this.blockchain.bans.push(ban.ban);
+        } else if(ban.type === 'deban'){
+            let iter = this.blockchain.bans.indexOf(ban.ban);
+            if(iter !== -1){
+                this.blockchain.bans.splice(iter, 1);
+            }
+        }
     }
 
     // validate mod from peer
     checkMod(mod){
-        this.blockchain.mods.push(mod);
-        console.log('from peer');
-    }
-
-    // remove an mod
-    checkDeMod(mod){
-        let iter = this.blockchain.mods.indexOf(mod);
-        if(iter !== -1){
-            this.blockchain.mods.splice(iter, 1);
-            console.log('from peer');
+        if(data.type === 'mod'){
+            this.blockchain.mods.push(mod.mod);
+        } else if(data.type === 'demod'){
+            let iter = this.blockchain.mods.indexOf(mod.mod);
+            if(iter !== -1){
+                this.blockchain.mods.splice(iter, 1);
+            }
         }
     }
 
