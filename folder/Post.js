@@ -11,10 +11,11 @@ const PostSchema = new mongoose.Schema({
     size: Number,
     timestamp: Number,
     category: String,
-    data: Array,
     replies: Array,
-    interests: Array
-}, {timestamps: {updatedAt: true, createdAt: true}, id: false});
+    interests: Array,
+    popular: Number,
+    updated: Number
+}, {timestamps: {createdAt: true}, id: false});
 
 PostSchema.plugin(mongoosePaginate);
 PostSchema.index({id: 'text'});

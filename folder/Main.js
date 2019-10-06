@@ -20,7 +20,6 @@ const Category = require('./Category.js');
 const EC = require('elliptic').ec;
 const nanoid = require('nanoid');
 const URL = require('url');
-const path = require('path');
 
 class Main {
     constructor(checksum){
@@ -248,6 +247,43 @@ class Main {
                 this.updates = this.updates.filter(e => {return e !== req.body.checksum});
                 return res.status(200).json('success');
             }
+        });
+        this.app.get('/data/updated/posts/:page/:limit', this.categorizeSystems, (req, res) => {
+            Post.paginate({updated: {$ne: null}}, {page: Number(req.params.page), limit: Number(req.params.limit), sort: {updated: -1}}, (error, data) => {
+                if(error){
+                    return res.status(500).json('error');
+                } else if(data){
+                    return res.status(200).json(data);
+                }
+            });
+        });
+        this.app.get('/data/popular/posts/:page/:limit', this.categorizeSystems, (req, res) => {
+            Post.paginate({popular: {$ne: null}}, {page: Number(req.params.page), limit: Number(req.params.limit), sort: {popular: 1}}, (error, data) => {
+                if(error){
+                    return res.status(500).json('error');
+                } else if(data){
+                    return res.status(200).json(data);
+                }
+            });
+        });
+        this.app.get('/data/updated/category/:category/:page/:limit', this.categorizeSystems, (req, res) => {
+            Post.paginate({category: req.params.category, updated: {$ne: null}}, {page: Number(req.params.page), limit: Number(req.params.limit), sort: {updated: -1}}, (error, data) => {
+                if(error){
+                    return res.status(500).json('error');
+                } else if(data){
+                    return res.status(200).json(data);
+                }
+            });
+        });
+        this.app.get('/data/popular/category/:category/:page/:limit', this.categorizeSystems, (req, res) => {
+            Post.paginate({category: req.params.category, popular: {$ne: null}}, {page: Number(req.params.page), limit: Number(req.params.limit), sort: {popular: 1}}, (error, data) => {
+                if(error){
+                    return res.status(500).json('error');
+                } else if(data){
+                    return res.status(200).json(data);
+                }
+            });
+
         });
         this.app.get('/data/category/:category', this.categorizeSystems, async (req, res) => {
             let categoryData = req.params.category;
@@ -522,6 +558,12 @@ class Main {
                 let size = req.file.size;
                 let newPost = {timestamp: Date.now(), postid: md5(this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex') + post.id), user: this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex'), userid: md5(this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex')), text: text, media: media, size: size};
                 post.replies.push(newPost);
+                if(post.popular !== null){
+                    post.popular = Date.now() - post.popular;
+                } else {
+                    post.popular = Date.now();
+                }
+                post.updated = Date.now();
                 post.save();
                 this.broadcastReply({peer: this.address, id: post._id, reply: newPost});
                 return res.status(200).json(newPost);
@@ -537,6 +579,12 @@ class Main {
                     return res.status(400).json('error');
                 } else {
                     post.interests.push(username);
+                    if(post.popular !== null){
+                        post.popular = Date.now() - post.popular;
+                    } else {
+                        post.popular = Date.now();
+                    }
+                    post.updated = Date.now();
                     post.save();
                     this.broadcastInterests({id: post._id, interests: username});
                     return res.status(200).json('success');
@@ -585,7 +633,7 @@ class Main {
                 let size = req.file.size;
                 let category = req.body.category;
                 let id = nanoid();
-                let post = await this.postDB({timestamp: Date.now(), id: id, postid: md5(this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex') + id), user: this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex'), userid: md5(this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex')), text: text, media: media, category: category, data: [], replies: [], interests: [], size: size});                      
+                let post = await this.postDB({timestamp: Date.now(), id: id, postid: md5(this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex') + id), user: this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex'), userid: md5(this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex')), text: text, media: media, category: category, replies: [], interests: [], size: size, popular: null, updated: null});                      
                 this.broadcastPost({peer: this.address, post});
                 return res.status(200).json(post);
             });
@@ -608,12 +656,24 @@ class Main {
                     let newPost = await this.getPost(posts.id);
                     if(newPost){
                         newPost.replies.push(posts.reply);
+                    if(newPost.popular !== null){
+                        newPost.popular = Date.now() - newPost.popular;
+                    } else {
+                        newPost.popular = Date.now();
+                    }
+                    newPost.updated = Date.now();
                         newPost.save();
                     }
                 } else if(posts.reply.media && posts.posts.size < this.sizeLimit){
                     let newPost = await this.getPost(posts.id);
                     if(newPost){
                         newPost.replies.push(posts.reply);
+                    if(newPost.popular !== null){
+                        newPost.popular = Date.now() - newPost.popular;
+                    } else {
+                        newPost.popular = Date.now();
+                    }
+                    newPost.updated = Date.now();
                         newPost.save();
                         // if(newPost.media){
                         //     this.downFiles(posts.posts.media, posts.peer);
@@ -629,7 +689,7 @@ class Main {
                 let size = req.file.size;
                 let category = req.body.category;
                 let id = nanoid();
-                let post = await this.postDB({timestamp: Date.now(), id: id, postid: md5(this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex') + id), user: this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex'), userid: md5(this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex')), text: text, media: media, category: category, data: [], replies: [], interests: [], size: size});                      
+                let post = await this.postDB({timestamp: Date.now(), id: id, postid: md5(this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex') + id), user: this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex'), userid: md5(this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex')), text: text, media: media, category: category, popular: null, updated: null, replies: [], interests: [], size: size});                      
                 this.broadcastPost({peer: this.address, post});
                 return res.status(200).json(post);
             });
@@ -652,12 +712,24 @@ class Main {
                     let newPost = await this.getPost(posts.id);
                     if(newPost){
                         newPost.replies.push(posts.reply);
+                    if(newPost.popular !== null){
+                        newPost.popular = Date.now() - newPost.popular;
+                    } else {
+                        newPost.popular = Date.now();
+                    }
+                    newPost.updated = Date.now();
                         newPost.save();
                     }
                 } else if(posts.reply.media && posts.posts.size < this.sizeLimit){
                     let newPost = await this.getPost(posts.id);
                     if(newPost){
                         newPost.replies.push(posts.reply);
+                    if(newPost.popular !== null){
+                        newPost.popular = Date.now() - newPost.popular;
+                    } else {
+                        newPost.popular = Date.now();
+                    }
+                    newPost.updated = Date.now();
                         newPost.save();
                         // if(newPost.media){
                         //     this.downFiles(posts.posts.media, posts.peer);
@@ -673,7 +745,7 @@ class Main {
                 let size = req.file.size;
                 let category = req.body.category;
                 let id = nanoid();
-                let post = await this.postDB({timestamp: Date.now(), id: id, postid: md5(this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex') + id), user: this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex'), userid: md5(this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex')), text: text, media: media, category: category, data: [], replies: [], interests: [], size: size});                      
+                let post = await this.postDB({timestamp: Date.now(), id: id, postid: md5(this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex') + id), user: this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex'), userid: md5(this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex')), text: text, media: media, category: category, updated: null, popular: null, replies: [], interests: [], size: size});                      
                 this.broadcastPost({peer: this.address, post});
                 return res.status(200).json(post);
             });
@@ -689,6 +761,12 @@ class Main {
                 let newPost = await this.getPost(posts.id);
                 if(newPost){
                     newPost.replies.push(posts.reply);
+                    if(newPost.popular !== null){
+                        newPost.popular = Date.now() - newPost.popular;
+                    } else {
+                        newPost.popular = Date.now();
+                    }
+                    newPost.updated = Date.now();
                     newPost.save();
                     // if(newPost.media){
                     //     this.downFiles(posts.posts.media, posts.peer);
@@ -1201,6 +1279,12 @@ class Main {
         if(post){
             if(!post.interests.includes(interests.username)){
                 post.interests.push(username);
+                if(post.popular !== null){
+                    post.popular = Date.now() - post.popular;
+                } else {
+                    post.popular = Date.now();
+                }
+                post.updated = Date.now();
                 post.save();
             }
         }
