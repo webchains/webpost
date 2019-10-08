@@ -516,17 +516,13 @@ class Main {
             return res.status(200).json({name: this.name, about: this.about, privatekey: wallet.getPrivate('hex'), publickey: wallet.getPublic('hex'), message: 'NEVER SHARE YOUR PRIVATE KEY!!!!! ONLY USE YOUR PRIVATE KEY TO SEND COINS'});
         });
         this.app.get('/data/posts/:page/:limit', (req, res) => {
-            if(!req.params.page){
-                return res.status(400).json('error');
-            } else {
-                Post.paginate({}, {page: Number(req.params.page), limit: Number(req.params.limit), sort: {createdAt: -1}}, (error, data) => {
-                    if(error){
-                        return res.status(500).json('error');
-                    } else if(data){
-                        return res.status(200).json(data);
-                    }
-                });
-            }
+            Post.paginate({}, {page: Number(req.params.page), limit: Number(req.params.limit), sort: {createdAt: -1}}, (error, data) => {
+                if(error){
+                    return res.status(500).json('error');
+                } else if(data){
+                    return res.status(200).json(data);
+                }
+            });
         });
         this.app.get('/data/categories/:page/:limit', (req, res) => {
             if(!req.params.page){
