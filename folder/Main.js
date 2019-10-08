@@ -305,7 +305,7 @@ class Main {
                 if(error){
                     return res.status(500).json('error');
                 } else if(data){
-                    return res.status(200).json(data);
+                    return res.status(200).json(data.length);
                 }
             });
         });
@@ -322,8 +322,7 @@ class Main {
         //     return res.status(200).json({name: this.name, checksum: this.checksum, about: this.about, peers: this.peers.length, count: this.count, type: this.type});
         // });
         this.app.get('/data/address/:address', (req, res) => {
-            let addressHash = md5(req.params.address);
-            Post.find({userid: addressHash}, (error, data) => {
+            Post.find({user: req.params.address}, (error, data) => {
                 if(error){
                     return res.status(500).json('error');
                 } else if(data){
