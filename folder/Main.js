@@ -561,7 +561,7 @@ class Main {
                 post.updated = Date.now();
                 post.save();
                 this.broadcastReply({peer: this.address, id: post._id, reply: newPost});
-                return res.status(200).json(newPost);
+                return res.status(200).json(post);
             } else {
                 return res.status(400).json('error');
             }
@@ -569,7 +569,7 @@ class Main {
         this.app.post('/data/interests/:post', this.interestSystems, async (req, res) => {
             let post = await this.getPost(req.params.post);
             if(post){
-                let username = md5(this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex') + post.id);
+                let username = this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex');
                 if(post.interests.includes(username)){
                     return res.status(400).json('error');
                 } else {
@@ -582,7 +582,7 @@ class Main {
                     post.updated = Date.now();
                     post.save();
                     this.broadcastInterests({id: post._id, interests: username});
-                    return res.status(200).json('success');
+                    return res.status(200).json(post);
                 }
             } else {
                 return res.status(400).json('error');
