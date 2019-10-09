@@ -287,27 +287,20 @@ class Main {
         });
         this.app.get('/data/category/:category', this.categorizeSystems, async (req, res) => {
             let categoryData = req.params.category;
+            let count = await Post.find({category: categoryData}).exec();
             let mainCategory = await this.getCategory(categoryData);
             if(mainCategory){
-                mainCategory.hits++;
+                mainCategory.hit++;
+                mainCategory.count = count.length;
                 mainCategory.save();
-                return res.status(200).json(mainCategory);
+                return res.status(200).json({mainCategory});
             } else {
                 let id = nanoid();
-                let hits = 1;
-                let categories = await this.categoryDB({category: categoryData, id, hits});
+                let hit = 1;
+                let categories = await this.categoryDB({category: categoryData, id, hit, count: count.length});
                 this.broadcastCategory({peer: this.address, category: categories, id: categoryData});
                 return res.status(200).json(categories);
             }
-        });
-        this.app.get('/categories/:category/count', async (req, res) => {
-            Post.find({category: req.params.category}, (error, data) => {
-                if(error){
-                    return res.status(500).json('error');
-                } else if(data){
-                    return res.status(200).json(data.length);
-                }
-            });
         });
         this.app.get('/categories/:category/:page/:limit', (req, res) => {
             Post.paginate({category: req.params.category}, {page: Number(req.params.page), limit: Number(req.params.limit), sort: {createdAt: -1}}, (error, data) => {
@@ -318,9 +311,9 @@ class Main {
                 }
             });
         });
-        // this.app.get('/data', (req, res) => {
-        //     return res.status(200).json({name: this.name, checksum: this.checksum, about: this.about, peers: this.peers.length, count: this.count, type: this.type});
-        // });
+        this.app.get('/data', (req, res) => {
+            return res.status(200).json({name: this.name, about: this.about, count: this.count, checksum: this.checksum, type: this.type});
+        });
         this.app.get('/data/address/:address', (req, res) => {
             Post.find({user: req.params.address}, (error, data) => {
                 if(error){
@@ -588,24 +581,6 @@ class Main {
                 return res.status(400).json('error');
             }
         });
-        this.app.post('/data/post/data', (req, res) => {
-            if(!req.body.main || !req.body.data || !req.body.id || typeof(req.body.main) !== 'string' || typeof(req.body.id) !== 'string'){
-                return res.status(400).json('error');
-            } else {
-                Post.findOne({id: req.body.id}, (error, post) => {
-                    if(error){
-                        return res.status(500).json('error');
-                    } else if(post){
-                        let mData = {userid: md5(this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex')), user: this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex'), dataid: md5(this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex') + post.id), data: req.body.data};
-                        post.data.push(mData);
-                        post.save();
-                        return res.status(200).json(post);
-                    } else if(!post){
-                        return res.status(400).json('error');
-                    }
-                });
-            }
-        });
         // this.app.post('/categories', this.categorySystems, async (req, res) => {
         //     let categoryData = req.body.category;
         //     let mainCategory = await this.getCategory(categoryData);
@@ -630,17 +605,20 @@ class Main {
                 let id = nanoid();
                 let post = await this.postDB({timestamp: Date.now(), id: id, postid: md5(this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex') + id), user: this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex'), userid: md5(this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex')), text: text, media: media, category: category, replies: [], interests: [], size: size, popular: null, updated: null});                      
                 this.broadcastPost({peer: this.address, post});
+                this.count++;
                 return res.status(200).json(post);
             });
             this.checkPost = async (post) => {
                 if(!post.post.media){
                     await this.postDB(post.post);
+                    this.count++;
                     // let newPost = await this.postDB(post.post);
                     // if(newPost.media){
                     //     this.downFiles(newPost.media, post.peer);
                     // }
                 } else if(post.post.media && post.post.size < this.sizeLimit){
                     await this.postDB(post.post);
+                    this.count++;
                     // let newPost = await this.postDB(post.post);
                     this.downFiles(post.post.media, post.peer);
                 }
@@ -686,17 +664,20 @@ class Main {
                 let id = nanoid();
                 let post = await this.postDB({timestamp: Date.now(), id: id, postid: md5(this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex') + id), user: this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex'), userid: md5(this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex')), text: text, media: media, category: category, popular: null, updated: null, replies: [], interests: [], size: size});                      
                 this.broadcastPost({peer: this.address, post});
+                this.count++;
                 return res.status(200).json(post);
             });
             this.checkPost = async (post) => {
                 if(!post.post.media){
                     await this.postDB(post.post);
+                    this.count++;
                     // let newPost = await this.postDB(post.post);
                     // if(newPost.media){
                     //     this.downFiles(newPost.media, post.peer);
                     // }
                 } else if(post.post.media && post.post.size < this.sizeLimit){
                     await this.postDB(post.post);
+                    this.count++;
                     // let newPost = await this.postDB(post.post);
                     this.downFiles(post.post.media, post.peer);
                 }
@@ -742,10 +723,12 @@ class Main {
                 let id = nanoid();
                 let post = await this.postDB({timestamp: Date.now(), id: id, postid: md5(this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex') + id), user: this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex'), userid: md5(this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex')), text: text, media: media, category: category, updated: null, popular: null, replies: [], interests: [], size: size});                      
                 this.broadcastPost({peer: this.address, post});
+                this.count++;
                 return res.status(200).json(post);
             });
             this.checkPost = async (post) => {
                 await this.postDB(post.post);
+                this.count++;
                 // let newPost = await this.postDB(post.post);
                 if(post.post.media){
                     this.downFiles(post.post.media, post.peer);
@@ -834,9 +817,6 @@ class Main {
         // console.log('peer 106',this.state.genesisHelp)
         console.log('replaced chain');
         console.log('connecting to peers and registering this peer');
-
-
-
     }
 
     // if the STARTUPDOWNLOAD option is on, then download all media files from the initial peer, default is off

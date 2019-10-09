@@ -4,7 +4,8 @@ const mongoosePaginate = require('mongoose-paginate');
 const CategorySchema = new mongoose.Schema({
     id: String,
     category: String,
-    hits: Number
+    hit: Number,
+    count: Number
 }, {timestamps: {updatedAt: true, createdAt: true}, id: false});
 
 CategorySchema.plugin(mongoosePaginate);
