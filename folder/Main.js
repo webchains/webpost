@@ -220,7 +220,7 @@ class Main {
         } else if(this.index === 'standard'){
             this.app.get('/', (req, res) => {
                 // return res.sendFile(path.resolve(__dirname + '../base/dist/index.html')); // potential update
-                return res.status(200).json('webcoin');
+                return res.status(200).json('webpost');
             });
         } else if(this.index === 'redirect'){
             this.app.get('/', (req, res) => {
@@ -248,7 +248,7 @@ class Main {
                 return res.status(200).json('success');
             }
         });
-        this.app.get('/data/updated/posts/:page/:limit', this.categorizeSystems, (req, res) => {
+        this.app.get('/data/updated/posts/:page/:limit', (req, res) => {
             Post.paginate({updated: {$ne: null}}, {page: Number(req.params.page), limit: Number(req.params.limit), sort: {updated: -1}}, (error, data) => {
                 if(error){
                     return res.status(500).json('error');
@@ -257,7 +257,7 @@ class Main {
                 }
             });
         });
-        this.app.get('/data/popular/posts/:page/:limit', this.categorizeSystems, (req, res) => {
+        this.app.get('/data/popular/posts/:page/:limit', (req, res) => {
             Post.paginate({popular: {$ne: null}}, {page: Number(req.params.page), limit: Number(req.params.limit), sort: {popular: 1}}, (error, data) => {
                 if(error){
                     return res.status(500).json('error');
