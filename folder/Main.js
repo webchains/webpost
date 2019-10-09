@@ -293,7 +293,7 @@ class Main {
                 mainCategory.hit++;
                 mainCategory.count = count.length;
                 mainCategory.save();
-                return res.status(200).json({mainCategory});
+                return res.status(200).json(mainCategory);
             } else {
                 let id = nanoid();
                 let hit = 1;
