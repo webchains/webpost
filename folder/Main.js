@@ -19,6 +19,7 @@ const http = require('http');
 const Category = require('./Category.js');
 const EC = require('elliptic').ec;
 const nanoid = require('nanoid');
+const {startFunc} = require('../config.js');
 const {URL, URLSearchParams} = require('url');
 
 class Main {
@@ -48,9 +49,9 @@ class Main {
         this.ec = new EC('secp256k1');
         this.secureDomain = Number(process.env.SECUREDOMAIN);
         if(this.secureDomain){
-            this.address = {url: process.env.DOMAIN, httpurl: `https://${process.env.DOMAIN}:${process.env.PORT}`, wsurl: `wss://${process.env.DOMAIN}:${process.env.PORT}`, hash: md5('https://' + process.env.DOMAIN + ':' + process.env.PORT + 'wss://' + process.env.DOMAIN + ':' + process.env.PORT)};
+            this.address = startFunc('https/wss');
         } else {
-            this.address = {url: process.env.DOMAIN, httpurl: `http://${process.env.DOMAIN}:${process.env.PORT}`, wsurl: `ws://${process.env.DOMAIN}:${process.env.PORT}`, hash: md5('http://' + process.env.DOMAIN + ':' + process.env.PORT + 'ws://' + process.env.DOMAIN + ':' + process.env.PORT)};
+            this.address = startFunc('http/ws');
         }
         this.port = Number(process.env.PORT);
         this.secureServer = Number(process.env.SECURESERVER);

@@ -182,4 +182,16 @@ function sideCheck(checksum, checksums){
     }
 }
 
-module.exports = {mineDifficulty, folderName, createFolders, writeDataFile, readDataFile, promiseFolder, makeFolder, deleteFolder, helpReward, minerDifficulty, helperReward, mainCheck, sideCheck};
+function startFunc(data){
+    if(data === 'http/ws'){
+        let address = {url: process.env.DOMAIN, httpurl: `http://${process.env.DOMAIN}:${process.env.PORT}`, wsurl: `ws://${process.env.DOMAIN}:${process.env.PORT}`};
+        address.hash = md5(address.httpurl + address.wsurl);
+        return address;
+    } else if(data === 'https/wss'){
+        let address = {url: process.env.DOMAIN, httpurl: `https://${process.env.DOMAIN}:${process.env.PORT}`, wsurl: `wss://${process.env.DOMAIN}:${process.env.PORT}`};
+        address.hash = md5(address.httpurl + address.wsurl);
+        return address;
+    }
+}
+
+module.exports = {startFunc, mineDifficulty, folderName, createFolders, writeDataFile, readDataFile, promiseFolder, makeFolder, deleteFolder, helpReward, minerDifficulty, helperReward, mainCheck, sideCheck};
