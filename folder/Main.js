@@ -323,10 +323,10 @@ class Main {
                 }
             });
         });
-        this.app.get('/node', (req, res) => {
+        this.app.get('/server', (req, res) => {
             return res.status(200).json(this.address);
         });
-        this.app.post('/node', (req, res) => {
+        this.app.post('/server', (req, res) => {
             if(!req.body.node || !req.body.type || req.body.type !== this.type || !req.body.checksum || this.checksum !== req.body.checksum && !this.updates.includes(req.body.checksum)){
                 return res.status(400).json('error');
             } else {
@@ -772,7 +772,7 @@ class Main {
         }
     }
     connectNode(){
-        axios.post(this.peerAddress.httpurl + '/node', {node: this.address, type: this.type, checksum: this.checksum}, {timeout: 10000}).then(res => {
+        axios.post(this.peerAddress.httpurl + '/server', {node: this.address, type: this.type, checksum: this.checksum}, {timeout: 10000}).then(res => {
             let data = res.data;
             // this.checkSameType({type: data.type, checksum: data.checksum});
             this.syncChain(data);
