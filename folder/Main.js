@@ -509,7 +509,7 @@ class Main {
             return res.status(200).json({name: this.name, about: this.about, privatekey: wallet.getPrivate('hex'), publickey: wallet.getPublic('hex'), message: 'NEVER SHARE YOUR PRIVATE KEY!!!!! ONLY USE YOUR PRIVATE KEY TO SEND COINS'});
         });
         this.app.get('/data/posts/:page/:limit', (req, res) => {
-            Post.paginate({}, {page: Number(req.params.page), limit: Number(req.params.limit), sort: {createdAt: -1}}, (error, data) => {
+            Post.paginate({updated: null, popular: null}, {page: Number(req.params.page), limit: Number(req.params.limit), sort: {createdAt: -1}}, (error, data) => {
                 if(error){
                     return res.status(500).json('error');
                 } else if(data){
@@ -549,7 +549,7 @@ class Main {
                 if(post.popular !== null){
                     post.popular = Date.now() - post.popular;
                 } else {
-                    post.popular = Date.now();
+                    post.popular = Date.now() - post.timestamp;
                 }
                 post.updated = Date.now();
                 post.save();
@@ -570,7 +570,7 @@ class Main {
                     if(post.popular !== null){
                         post.popular = Date.now() - post.popular;
                     } else {
-                        post.popular = Date.now();
+                        post.popular = Date.now() - post.timestamp;
                     }
                     post.updated = Date.now();
                     post.save();
@@ -632,7 +632,7 @@ class Main {
                     if(newPost.popular !== null){
                         newPost.popular = Date.now() - newPost.popular;
                     } else {
-                        newPost.popular = Date.now();
+                        newPost.popular = Date.now() - newPost.timestamp;
                     }
                     newPost.updated = Date.now();
                         newPost.save();
@@ -644,7 +644,7 @@ class Main {
                     if(newPost.popular !== null){
                         newPost.popular = Date.now() - newPost.popular;
                     } else {
-                        newPost.popular = Date.now();
+                        newPost.popular = Date.now() - newPost.timestamp;
                     }
                     newPost.updated = Date.now();
                         newPost.save();
@@ -691,7 +691,7 @@ class Main {
                     if(newPost.popular !== null){
                         newPost.popular = Date.now() - newPost.popular;
                     } else {
-                        newPost.popular = Date.now();
+                        newPost.popular = Date.now() - newPost.timestamp;
                     }
                     newPost.updated = Date.now();
                         newPost.save();
@@ -703,7 +703,7 @@ class Main {
                     if(newPost.popular !== null){
                         newPost.popular = Date.now() - newPost.popular;
                     } else {
-                        newPost.popular = Date.now();
+                        newPost.popular = Date.now() - newPost.timestamp;
                     }
                     newPost.updated = Date.now();
                         newPost.save();
@@ -742,7 +742,7 @@ class Main {
                     if(newPost.popular !== null){
                         newPost.popular = Date.now() - newPost.popular;
                     } else {
-                        newPost.popular = Date.now();
+                        newPost.popular = Date.now() - newPost.timestamp;
                     }
                     newPost.updated = Date.now();
                     newPost.save();
@@ -1258,7 +1258,7 @@ class Main {
                 if(post.popular !== null){
                     post.popular = Date.now() - post.popular;
                 } else {
-                    post.popular = Date.now();
+                    post.popular = Date.now() - post.timestamp;
                 }
                 post.updated = Date.now();
                 post.save();
