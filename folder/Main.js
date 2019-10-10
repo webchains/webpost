@@ -19,7 +19,7 @@ const http = require('http');
 const Category = require('./Category.js');
 const EC = require('elliptic').ec;
 const nanoid = require('nanoid');
-const URL = require('url');
+const {URL, URLSearchParams} = require('url');
 
 class Main {
     constructor(checksum){
@@ -769,7 +769,7 @@ class Main {
         }
     }
     connectNode(){
-        axios.post(this.peerAddress.httpurl + '/node', {peer: this.address, type: this.type, checksum: this.checksum}, {timeout: 10000}).then(res => {
+        axios.post(this.peerAddress.httpurl + '/node', {node: this.address, type: this.type, checksum: this.checksum}, {timeout: 10000}).then(res => {
             let data = res.data;
             // this.checkSameType({type: data.type, checksum: data.checksum});
             this.syncChain(data);
@@ -885,7 +885,7 @@ class Main {
     }
 
     // start web socket server and listen to connections
-    servListen(){
+    async servListen(){
 
         // const P2P_PORT = process.env.WSPORT;
         // const P2P_HOST = process.env.HOST;
@@ -929,7 +929,7 @@ class Main {
 
         //------------------------------------------------------------------------------------------//
         // start the process of getting the chain from the intial peer and connecting to all peers
-            // this.removeDB();
+            await this.removeDB();
             this.connectNode();
         // this.connectToPeers();
         //------------------------------------------------------------------------------------------//
@@ -945,18 +945,18 @@ class Main {
     connectNodePeer(peer){
             // create a socket for each peer
             let url = new URL(peer.wsurl);
-            url.set('url', this.address.url);
-            url.set('hash', this.address.hash);
-            url.set('httpurl', this.address.httpurl);
-            url.set('wsurl', this.address.wsurl);
-            const socket = new WebSocket(url.href);
+            let queryParams = new URLSearchParams(url.search);
+            queryParams.set('url', this.address.url);
+            queryParams.set('hash', this.address.hash);
+            queryParams.set('httpurl', this.address.httpurl);
+            queryParams.set('wsurl', this.address.wsurl);
+            const socket = new WebSocket(url.href + '?' + queryParams.toString());
             socket.address = peer;
             
             // open event listner is emitted when a connection is established
             // saving the socket in the array
             socket.on('open', async () => {
                 await this.sendPost(socket);
-                this.broadcastPeer(peer);
                 this.connectSocket(socket);
                 this.sockets.push(socket);
                 console.log("Socket connected");
@@ -996,11 +996,12 @@ class Main {
     connectOnlyPeer(peer){
             // create a socket for each peer
             let url = new URL(peer.wsurl);
-            url.set('url', this.address.url);
-            url.set('hash', this.address.hash);
-            url.set('httpurl', this.address.httpurl);
-            url.set('wsurl', this.address.wsurl);
-            const socket = new WebSocket(peer.href);
+            let queryParams = new URLSearchParams(url.search);
+            queryParams.set('url', this.address.url);
+            queryParams.set('hash', this.address.hash);
+            queryParams.set('httpurl', this.address.httpurl);
+            queryParams.set('wsurl', this.address.wsurl);
+            const socket = new WebSocket(url.href + '?' + queryParams.toString());
             socket.address = peer;
             
             // open event listner is emitted when a connection is established
@@ -1060,7 +1061,7 @@ class Main {
         let cursor = Post.find({}).cursor();
         return new Promise((resolve, reject) => {
             cursor.on('data', data => {
-                socket.send(JSON.stringify({type: this.MESSAGE_TYPE.post, post: data}));
+                socket.send(JSON.stringify({type: this.MESSAGE_TYPE.post, post: {peer: this.address, post: data}}));
             });
             cursor.on('end', () => {
                 resolve(true);
