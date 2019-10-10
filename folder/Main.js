@@ -1038,8 +1038,8 @@ class Main {
         });
         for(let i = 0; i < this.sockets.length; i++){
             if(this.sockets[i].address.hash === peer || this.sockets[i].address.url === peer || this.sockets[i].address.httpurl === peer || this.sockets[i].address.wsurl === peer){
-                if(this.socket[i].beat){
-                    clearInterval(this.socket[i].beat);
+                if(this.sockets[i].beat){
+                    clearInterval(this.sockets[i].beat);
                 }
                 this.sockets[i].close();
                 // this.sockets[i].terminate();
