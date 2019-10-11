@@ -249,7 +249,7 @@ class Main {
                 return res.status(200).json('success');
             }
         });
-        this.app.get('/data/updated/posts/:page/:limit', (req, res) => {
+        this.app.get('/data/posts/updated/:page/:limit', (req, res) => {
             Post.paginate({updated: {$ne: null}}, {page: Number(req.params.page), limit: Number(req.params.limit), sort: {updated: -1}}, (error, data) => {
                 if(error){
                     return res.status(500).json('error');
@@ -258,7 +258,7 @@ class Main {
                 }
             });
         });
-        this.app.get('/data/popular/posts/:page/:limit', (req, res) => {
+        this.app.get('/data/posts/popular/:page/:limit', (req, res) => {
             Post.paginate({popular: {$ne: null}}, {page: Number(req.params.page), limit: Number(req.params.limit), sort: {popular: 1}}, (error, data) => {
                 if(error){
                     return res.status(500).json('error');
@@ -267,7 +267,61 @@ class Main {
                 }
             });
         });
-        this.app.get('/data/updated/category/:category/:page/:limit', this.categorizeSystems, (req, res) => {
+        this.app.get('/data/posts/new/:page/:limit', (req, res) => {
+            Post.paginate({updated: null, popular: null}, {page: Number(req.params.page), limit: Number(req.params.limit), sort: {timestamp: -1}}, (error, data) => {
+                if(error){
+                    return res.status(500).json('error');
+                } else if(data){
+                    return res.status(200).json(data);
+                }
+            });
+        });
+        this.app.get('/data/categories/hits/:page/:limit', (req, res) => {
+            Category.paginate({}, {page: Number(req.params.page), limit: Number(req.params.limit), sort: {hit: -1}}, (error, data) => {
+                if(error){
+                    return res.status(500).json('error');
+                } else if(data){
+                    return res.status(200).json(data);
+                }
+            });
+        });
+        this.app.get('/data/categories/new/:page/:limit', (req, res) => {
+            Category.paginate({updated: null, popular: null}, {page: Number(req.params.page), limit: Number(req.params.limit), sort: {timestamp: -1}}, (error, data) => {
+                if(error){
+                    return res.status(500).json('error');
+                } else if(data){
+                    return res.status(200).json(data);
+                }
+            });
+        });
+        this.app.get('/data/categories/updated/:page/:limit', (req, res) => {
+            Category.paginate({updated: {$ne: null}}, {page: Number(req.params.page), limit: Number(req.params.limit), sort: {updated: -1}}, (error, data) => {
+                if(error){
+                    return res.status(500).json('error');
+                } else if(data){
+                    return res.status(200).json(data);
+                }
+            });
+        });
+        this.app.get('/data/categories/popular/:page/:limit', (req, res) => {
+            Category.paginate({popular: {$ne: null}}, {page: Number(req.params.page), limit: Number(req.params.limit), sort: {popular: 1}}, (error, data) => {
+                if(error){
+                    return res.status(500).json('error');
+                } else if(data){
+                    return res.status(200).json(data);
+                }
+            });
+        });
+        this.app.get('/data/category/new/:category/:page/:limit', (req, res) => {
+            Post.paginate({category: req.params.category, updated: null, popular: null}, {page: Number(req.params.page), limit: Number(req.params.limit), sort: {timestamp: -1}}, (error, data) => {
+                if(error){
+                    return res.status(500).json('error');
+                } else if(data){
+                    return res.status(200).json(data);
+                }
+            });
+        });
+        this.app.get('/data/category/updated/:category/:page/:limit', this.categorizeSystems, (req, res) => {
             Post.paginate({category: req.params.category, updated: {$ne: null}}, {page: Number(req.params.page), limit: Number(req.params.limit), sort: {updated: -1}}, (error, data) => {
                 if(error){
                     return res.status(500).json('error');
@@ -276,7 +330,7 @@ class Main {
                 }
             });
         });
-        this.app.get('/data/popular/category/:category/:page/:limit', this.categorizeSystems, (req, res) => {
+        this.app.get('/data/category/popular/:category/:page/:limit', this.categorizeSystems, (req, res) => {
             Post.paginate({category: req.params.category, popular: {$ne: null}}, {page: Number(req.params.page), limit: Number(req.params.limit), sort: {popular: 1}}, (error, data) => {
                 if(error){
                     return res.status(500).json('error');
@@ -284,33 +338,14 @@ class Main {
                     return res.status(200).json(data);
                 }
             });
-
         });
-        this.app.get('/data/category/:category', this.categorizeSystems, async (req, res) => {
-            let categoryData = req.params.category;
-            let count = await Post.find({category: categoryData}).exec();
-            let mainCategory = await this.getCategory(categoryData);
-            if(mainCategory){
-                mainCategory.hit++;
-                mainCategory.count = count.length;
-                mainCategory.save();
-                return res.status(200).json(mainCategory);
+        this.app.get('/data/post/:post', async (req, res) => {
+            let post = await this.getPost(req.params.post);
+            if(post){
+                return res.status(200).json(post);
             } else {
-                let id = nanoid();
-                let hit = 1;
-                let categories = await this.categoryDB({category: categoryData, id, hit, count: count.length});
-                this.broadcastCategory({peer: this.address, category: categories, id: categoryData});
-                return res.status(200).json(categories);
+                return res.status(400).json('error');
             }
-        });
-        this.app.get('/categories/:category/:page/:limit', (req, res) => {
-            Post.paginate({category: req.params.category}, {page: Number(req.params.page), limit: Number(req.params.limit), sort: {createdAt: -1}}, (error, data) => {
-                if(error){
-                    return res.status(500).json('error');
-                } else if(data){
-                    return res.status(200).json(data);
-                }
-            });
         });
         this.app.get('/data', (req, res) => {
             return res.status(200).json({name: this.name, about: this.about, count: this.count, checksum: this.checksum, type: this.type});
@@ -323,6 +358,32 @@ class Main {
                     return res.status(200).json(data);
                 }
             });
+        });
+        this.app.get('/data/category/upsert/:category', this.categorizeSystems, async (req, res) => {
+            let categoryData = req.params.category;
+            let count = await Post.find({category: categoryData}).count().exec();
+            let mainCategory = await this.getCategory(categoryData);
+            if(mainCategory){
+                mainCategory.hit++;
+                mainCategory.count = count;
+                if(mainCategory.popular !== null){
+                    mainCategory.popular = Date.now() - mainCategory.popular;
+                } else {
+                    mainCategory.popular = Date.now() - mainCategory.timestamp;
+                }
+                mainCategory.updated = Date.now();
+                mainCategory.save();
+                return res.status(200).json(mainCategory);
+            } else {
+                let id = nanoid();
+                let hit = 1;
+                let timestamp = Date.now();
+                let popular = null;
+                let updated = null;
+                let categories = await this.categoryDB({category: categoryData, id, hit, count, timestamp, popular, updated});
+                this.broadcastCategory({peer: this.address, category: categories, id: categoryData});
+                return res.status(200).json(categories);
+            }
         });
         this.app.get('/server', (req, res) => {
             return res.status(200).json(this.address);
@@ -512,37 +573,7 @@ class Main {
             let wallet = this.ec.genKeyPair();
             return res.status(200).json({name: this.name, about: this.about, privatekey: wallet.getPrivate('hex'), publickey: wallet.getPublic('hex'), message: 'NEVER SHARE YOUR PRIVATE KEY!!!!! ONLY USE YOUR PRIVATE KEY TO SEND COINS'});
         });
-        this.app.get('/data/posts/:page/:limit', (req, res) => {
-            Post.paginate({updated: null, popular: null}, {page: Number(req.params.page), limit: Number(req.params.limit), sort: {createdAt: -1}}, (error, data) => {
-                if(error){
-                    return res.status(500).json('error');
-                } else if(data){
-                    return res.status(200).json(data);
-                }
-            });
-        });
-        this.app.get('/data/categories/:page/:limit', (req, res) => {
-            if(!req.params.page){
-                return res.status(400).json('error');
-            } else {
-                Category.paginate({}, {page: Number(req.params.page), limit: Number(req.params.limit), sort: {hits: -1}}, (error, data) => {
-                    if(error){
-                        return res.status(500).json('error');
-                    } else if(data){
-                        return res.status(200).json(data);
-                    }
-                });
-            }
-        });
-        this.app.get('/data/post/:post', async (req, res) => {
-            let post = await this.getPost(req.params.post);
-            if(post){
-                return res.status(200).json(post);
-            } else {
-                return res.status(400).json('error');
-            }
-        });
-        this.app.post('/data/replies/:post', this.upload, this.replySystems, async (req, res) => {
+        this.app.post('/replies/:post', this.upload, this.replySystems, async (req, res) => {
             let post = await this.getPost(req.params.post);
             if(post){
                 let text = req.body.text;
@@ -563,7 +594,7 @@ class Main {
                 return res.status(400).json('error');
             }
         });
-        this.app.post('/data/interests/:post', this.interestSystems, async (req, res) => {
+        this.app.post('/interests/:post', this.interestSystems, async (req, res) => {
             let post = await this.getPost(req.params.post);
             if(post){
                 let username = this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex');
@@ -578,7 +609,7 @@ class Main {
                     }
                     post.updated = Date.now();
                     post.save();
-                    this.broadcastInterests({id: post._id, interests: username});
+                    this.broadcastInterests({id: post._id, username});
                     return res.status(200).json(post);
                 }
             } else {
@@ -943,6 +974,7 @@ class Main {
 
     async removeDB(){
         await Post.deleteMany({});
+        await Category.deleteMany({});
         return true;
     }
 
@@ -961,6 +993,7 @@ class Main {
             // saving the socket in the array
             socket.on('open', async () => {
                 await this.sendPost(socket);
+                await this.sendCategory(socket);
                 this.connectSocket(socket);
                 this.sockets.push(socket);
                 console.log("Socket connected");
@@ -1066,6 +1099,22 @@ class Main {
         return new Promise((resolve, reject) => {
             cursor.on('data', data => {
                 socket.send(JSON.stringify({type: this.MESSAGE_TYPE.post, post: {peer: this.address, post: data}}));
+            });
+            cursor.on('end', () => {
+                resolve(true);
+            });
+            cursor.on('error', error => {
+                console.log(error);
+                reject(false);
+            });
+        });
+    }
+
+    sendCategory(socket){
+        let cursor = Category.find({}).cursor();
+        return new Promise((resolve, reject) => {
+            cursor.on('data', data => {
+                socket.send(JSON.stringify({type: this.MESSAGE_TYPE.category, category: {peer: this.address, id: data.category, category: data}}));
             });
             cursor.on('end', () => {
                 resolve(true);
@@ -1258,7 +1307,7 @@ class Main {
         let post = await this.getPost(interests.id);
         if(post){
             if(!post.interests.includes(interests.username)){
-                post.interests.push(username);
+                post.interests.push(interests.username);
                 if(post.popular !== null){
                     post.popular = Date.now() - post.popular;
                 } else {

@@ -15,7 +15,7 @@ const PostSchema = new mongoose.Schema({
     interests: Array,
     popular: Number,
     updated: Number
-}, {timestamps: {createdAt: true}, id: false});
+}, {id: false});
 
 PostSchema.plugin(mongoosePaginate);
 PostSchema.index({id: 'text'});

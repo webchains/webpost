@@ -5,8 +5,11 @@ const CategorySchema = new mongoose.Schema({
     id: String,
     category: String,
     hit: Number,
-    count: Number
-}, {timestamps: {updatedAt: true, createdAt: true}, id: false});
+    count: Number,
+    timestamp: Number,
+    popular: Number,
+    updated: Number
+}, {id: false});
 
 CategorySchema.plugin(mongoosePaginate);
 CategorySchema.index({id: 'text'});
