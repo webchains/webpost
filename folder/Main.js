@@ -576,8 +576,8 @@ class Main {
             let post = await this.getPost(req.params.post);
             if(post){
                 let text = req.body.text ? req.body.text : null;
-                let media = req.file.filename ? req.file.filename : null;
-                let size = req.file.size ? req.file.size : null;
+                let media = req.file ? req.file.filename : null;
+                let size = req.file ? req.file.size : null;
                 let newPost = {timestamp: Date.now(), user: this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex'), text: text, media: media, size: size};
                 post.replies.push(newPost);
                 if(post.popular !== null){
@@ -633,8 +633,8 @@ class Main {
         if(this.package === 'standard'){
             this.app.post('/posts', this.upload, this.system, async (req, res) => {
                 let text = req.body.text ? req.body.text : null;
-                let media = req.file.filename ? req.file.filename : null;
-                let size = req.file.size ? req.file.size : null;
+                let media = req.file ? req.file.filename : null;
+                let size = req.file ? req.file.size : null;
                 let category = req.body.category;
                 let post = await this.postDB({timestamp: Date.now(), user: this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex'), text: text, media: media, category: category, replies: [], interests: [], size: size, popular: null, updated: null});                      
                 this.broadcastPost({peer: this.address, post});
@@ -691,8 +691,8 @@ class Main {
         } else if(this.package === 'choose'){
             this.app.post('/posts', this.upload, this.system, async (req, res) => {
                 let text = req.body.text ? req.body.text : null;
-                let media = req.file.filename ? req.file.filename : null;
-                let size = req.file.size ? req.file.size : null;
+                let media = req.file ? req.file.filename : null;
+                let size = req.file ? req.file.size : null;
                 let category = req.body.category;
                 let post = await this.postDB({timestamp: Date.now(), user: this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex'), text: text, media: media, category: category, popular: null, updated: null, replies: [], interests: [], size: size});                      
                 this.broadcastPost({peer: this.address, post});
@@ -749,8 +749,8 @@ class Main {
         } else if(this.package === 'unlimited'){
             this.app.post('/posts', this.upload, this.system, async (req, res) => {
                 let text = req.body.text ? req.body.text : null;
-                let media = req.file.filename ? req.file.filename : null;
-                let size = req.file.size ? req.file.size : null;
+                let media = req.file ? req.file.filename : null;
+                let size = req.file ? req.file.size : null;
                 let category = req.body.category;
                 let post = await this.postDB({timestamp: Date.now(), user: this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex'), text: text, media: media, category: category, updated: null, popular: null, replies: [], interests: [], size: size});                      
                 this.broadcastPost({peer: this.address, post});
