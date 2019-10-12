@@ -348,7 +348,7 @@ class Main {
             }
         });
         this.app.get('/data', (req, res) => {
-            return res.status(200).json({name: this.name, about: this.about, count: this.count, checksum: this.checksum, type: this.type});
+            return res.status(200).json({name: this.name, about: this.about, count: this.count, checksum: this.checksum, type: this.type, package: this.package});
         });
         this.app.get('/data/address/:address', (req, res) => {
             Post.find({user: req.params.address}, (error, data) => {
