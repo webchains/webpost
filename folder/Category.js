@@ -2,7 +2,6 @@ const mongoose = require('mongoose');
 const mongoosePaginate = require('mongoose-paginate');
 
 const CategorySchema = new mongoose.Schema({
-    id: String,
     category: String,
     hit: Number,
     count: Number,

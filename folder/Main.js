@@ -18,7 +18,6 @@ const https = require('https');
 const http = require('http');
 const Category = require('./Category.js');
 const EC = require('elliptic').ec;
-const nanoid = require('nanoid');
 const {startFunc} = require('../config.js');
 const {URL, URLSearchParams} = require('url');
 
@@ -68,7 +67,8 @@ class Main {
         this.dbRandom = process.env.RANDOM;
         this.dbName = 'mongodb://localhost:27017/' + md5(this.dbRandom);
         this.peerAddress = {httpurl: process.env.PEERHTTPURL, wsurl: process.env.PEERWSURL};
-        this.sockets = [];
+        // this.sockets = [];
+        this.sockets = new Set();
 
         this.MESSAGE_TYPE = {
             beat: 'BEAT',
@@ -77,8 +77,8 @@ class Main {
             mod: 'MOD',
             ban: 'BAN',
             post: 'POST',
-            reply: 'REPLY',
-            interests: 'INTERESTS',
+            // reply: 'REPLY',
+            // interests: 'INTERESTS',
             category: 'CATEGORY'
         };
         
@@ -375,12 +375,11 @@ class Main {
                 mainCategory.save();
                 return res.status(200).json(mainCategory);
             } else {
-                let id = nanoid();
                 let hit = 1;
                 let timestamp = Date.now();
                 let popular = null;
                 let updated = null;
-                let categories = await this.categoryDB({category: categoryData, id, hit, count, timestamp, popular, updated});
+                let categories = await this.categoryDB({category: categoryData, hit, count, timestamp, popular, updated});
                 this.broadcastCategory({peer: this.address, category: categories, id: categoryData});
                 return res.status(200).json(categories);
             }
@@ -579,7 +578,7 @@ class Main {
                 let text = req.body.text;
                 let media = req.file.filename;
                 let size = req.file.size;
-                let newPost = {timestamp: Date.now(), postid: md5(this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex') + post.id), user: this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex'), userid: md5(this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex')), text: text, media: media, size: size};
+                let newPost = {timestamp: Date.now(), user: this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex'), text: text, media: media, size: size};
                 post.replies.push(newPost);
                 if(post.popular !== null){
                     post.popular = Date.now() - post.popular;
@@ -588,7 +587,7 @@ class Main {
                 }
                 post.updated = Date.now();
                 post.save();
-                this.broadcastReply({peer: this.address, id: post._id, reply: newPost});
+                // this.broadcastReply({peer: this.address, id: post._id, reply: newPost});
                 return res.status(200).json(post);
             } else {
                 return res.status(400).json('error');
@@ -609,7 +608,7 @@ class Main {
                     }
                     post.updated = Date.now();
                     post.save();
-                    this.broadcastInterests({id: post._id, username});
+                    // this.broadcastInterests({id: post._id, username});
                     return res.status(200).json(post);
                 }
             } else {
@@ -637,8 +636,7 @@ class Main {
                 let media = req.file.filename;
                 let size = req.file.size;
                 let category = req.body.category;
-                let id = nanoid();
-                let post = await this.postDB({timestamp: Date.now(), id: id, postid: md5(this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex') + id), user: this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex'), userid: md5(this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex')), text: text, media: media, category: category, replies: [], interests: [], size: size, popular: null, updated: null});                      
+                let post = await this.postDB({timestamp: Date.now(), user: this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex'), text: text, media: media, category: category, replies: [], interests: [], size: size, popular: null, updated: null});                      
                 this.broadcastPost({peer: this.address, post});
                 this.count++;
                 return res.status(200).json(post);
@@ -659,45 +657,44 @@ class Main {
                 }
             }
         
-            this.checkReply = async (posts) => {
-                if(!posts.reply.media){
-                    let newPost = await this.getPost(posts.id);
-                    if(newPost){
-                        newPost.replies.push(posts.reply);
-                    if(newPost.popular !== null){
-                        newPost.popular = Date.now() - newPost.popular;
-                    } else {
-                        newPost.popular = Date.now() - newPost.timestamp;
-                    }
-                    newPost.updated = Date.now();
-                        newPost.save();
-                    }
-                } else if(posts.reply.media && posts.posts.size < this.sizeLimit){
-                    let newPost = await this.getPost(posts.id);
-                    if(newPost){
-                        newPost.replies.push(posts.reply);
-                    if(newPost.popular !== null){
-                        newPost.popular = Date.now() - newPost.popular;
-                    } else {
-                        newPost.popular = Date.now() - newPost.timestamp;
-                    }
-                    newPost.updated = Date.now();
-                        newPost.save();
-                        // if(newPost.media){
-                        //     this.downFiles(posts.posts.media, posts.peer);
-                        // }
-                        this.downFiles(posts.reply.media, posts.peer);
-                    }
-                }
-            }
+            // this.checkReply = async (posts) => {
+            //     if(!posts.reply.media){
+            //         let newPost = await this.getPost(posts.id);
+            //         if(newPost){
+            //             newPost.replies.push(posts.reply);
+            //         if(newPost.popular !== null){
+            //             newPost.popular = Date.now() - newPost.popular;
+            //         } else {
+            //             newPost.popular = Date.now() - newPost.timestamp;
+            //         }
+            //         newPost.updated = Date.now();
+            //             newPost.save();
+            //         }
+            //     } else if(posts.reply.media && posts.posts.size < this.sizeLimit){
+            //         let newPost = await this.getPost(posts.id);
+            //         if(newPost){
+            //             newPost.replies.push(posts.reply);
+            //         if(newPost.popular !== null){
+            //             newPost.popular = Date.now() - newPost.popular;
+            //         } else {
+            //             newPost.popular = Date.now() - newPost.timestamp;
+            //         }
+            //         newPost.updated = Date.now();
+            //             newPost.save();
+            //             // if(newPost.media){
+            //             //     this.downFiles(posts.posts.media, posts.peer);
+            //             // }
+            //             this.downFiles(posts.reply.media, posts.peer);
+            //         }
+            //     }
+            // }
         } else if(this.package === 'choose'){
             this.app.post('/posts', this.upload, this.system, async (req, res) => {
                 let text = req.body.text;
                 let media = req.file.filename;
                 let size = req.file.size;
                 let category = req.body.category;
-                let id = nanoid();
-                let post = await this.postDB({timestamp: Date.now(), id: id, postid: md5(this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex') + id), user: this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex'), userid: md5(this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex')), text: text, media: media, category: category, popular: null, updated: null, replies: [], interests: [], size: size});                      
+                let post = await this.postDB({timestamp: Date.now(), user: this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex'), text: text, media: media, category: category, popular: null, updated: null, replies: [], interests: [], size: size});                      
                 this.broadcastPost({peer: this.address, post});
                 this.count++;
                 return res.status(200).json(post);
@@ -718,45 +715,44 @@ class Main {
                 }
             }
         
-            this.checkReply = async (posts) => {
-                if(!posts.reply.media){
-                    let newPost = await this.getPost(posts.id);
-                    if(newPost){
-                        newPost.replies.push(posts.reply);
-                    if(newPost.popular !== null){
-                        newPost.popular = Date.now() - newPost.popular;
-                    } else {
-                        newPost.popular = Date.now() - newPost.timestamp;
-                    }
-                    newPost.updated = Date.now();
-                        newPost.save();
-                    }
-                } else if(posts.reply.media && posts.posts.size < this.sizeLimit){
-                    let newPost = await this.getPost(posts.id);
-                    if(newPost){
-                        newPost.replies.push(posts.reply);
-                    if(newPost.popular !== null){
-                        newPost.popular = Date.now() - newPost.popular;
-                    } else {
-                        newPost.popular = Date.now() - newPost.timestamp;
-                    }
-                    newPost.updated = Date.now();
-                        newPost.save();
-                        // if(newPost.media){
-                        //     this.downFiles(posts.posts.media, posts.peer);
-                        // }
-                        this.downFiles(posts.reply.media, posts.peer);
-                    }
-                }
-            }
+            // this.checkReply = async (posts) => {
+            //     if(!posts.reply.media){
+            //         let newPost = await this.getPost(posts.id);
+            //         if(newPost){
+            //             newPost.replies.push(posts.reply);
+            //         if(newPost.popular !== null){
+            //             newPost.popular = Date.now() - newPost.popular;
+            //         } else {
+            //             newPost.popular = Date.now() - newPost.timestamp;
+            //         }
+            //         newPost.updated = Date.now();
+            //             newPost.save();
+            //         }
+            //     } else if(posts.reply.media && posts.posts.size < this.sizeLimit){
+            //         let newPost = await this.getPost(posts.id);
+            //         if(newPost){
+            //             newPost.replies.push(posts.reply);
+            //         if(newPost.popular !== null){
+            //             newPost.popular = Date.now() - newPost.popular;
+            //         } else {
+            //             newPost.popular = Date.now() - newPost.timestamp;
+            //         }
+            //         newPost.updated = Date.now();
+            //             newPost.save();
+            //             // if(newPost.media){
+            //             //     this.downFiles(posts.posts.media, posts.peer);
+            //             // }
+            //             this.downFiles(posts.reply.media, posts.peer);
+            //         }
+            //     }
+            // }
         } else if(this.package === 'unlimited'){
             this.app.post('/posts', this.upload, this.system, async (req, res) => {
                 let text = req.body.text;
                 let media = req.file.filename;
                 let size = req.file.size;
                 let category = req.body.category;
-                let id = nanoid();
-                let post = await this.postDB({timestamp: Date.now(), id: id, postid: md5(this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex') + id), user: this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex'), userid: md5(this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex')), text: text, media: media, category: category, updated: null, popular: null, replies: [], interests: [], size: size});                      
+                let post = await this.postDB({timestamp: Date.now(), user: this.ec.keyFromPrivate(req.body.main, 'hex').getPublic('hex'), text: text, media: media, category: category, updated: null, popular: null, replies: [], interests: [], size: size});                      
                 this.broadcastPost({peer: this.address, post});
                 this.count++;
                 return res.status(200).json(post);
@@ -770,25 +766,25 @@ class Main {
                 }
             }
         
-            this.checkReply = async (posts) => {
-                let newPost = await this.getPost(posts.id);
-                if(newPost){
-                    newPost.replies.push(posts.reply);
-                    if(newPost.popular !== null){
-                        newPost.popular = Date.now() - newPost.popular;
-                    } else {
-                        newPost.popular = Date.now() - newPost.timestamp;
-                    }
-                    newPost.updated = Date.now();
-                    newPost.save();
-                    // if(newPost.media){
-                    //     this.downFiles(posts.posts.media, posts.peer);
-                    // }
-                    if(posts.reply.media){
-                        this.downFiles(posts.reply.media, posts.peer);
-                    }
-                }
-            }
+            // this.checkReply = async (posts) => {
+            //     let newPost = await this.getPost(posts.id);
+            //     if(newPost){
+            //         newPost.replies.push(posts.reply);
+            //         if(newPost.popular !== null){
+            //             newPost.popular = Date.now() - newPost.popular;
+            //         } else {
+            //             newPost.popular = Date.now() - newPost.timestamp;
+            //         }
+            //         newPost.updated = Date.now();
+            //         newPost.save();
+            //         // if(newPost.media){
+            //         //     this.downFiles(posts.posts.media, posts.peer);
+            //         // }
+            //         if(posts.reply.media){
+            //             this.downFiles(posts.reply.media, posts.peer);
+            //         }
+            //     }
+            // }
         }
         this.app.get('*', (req, res) => {
             return res.status(200).json('not found');
@@ -995,18 +991,20 @@ class Main {
                 await this.sendPost(socket);
                 await this.sendCategory(socket);
                 this.connectSocket(socket);
-                this.sockets.push(socket);
+                // this.sockets.push(socket);
+                this.sockets.add(socket);
                 console.log("Socket connected");
             });
             socket.on('error', error => {
                 console.log(error);
-                this.removeSocket(socket.address.hash);
+                // this.removeSocket(socket.address.hash);
+                socket.close();
+                // this.sockets.delete(socket);
             });
             socket.on('close', (code, reason) => {
                 console.log('peer disconnected', code, reason);
-                this.removeSocket(socket.address.hash);
-                // console.log('sockets length',this.sockets.length, this.sockets);
-                // socket.terminate();
+                // this.removeSocket(socket.address.hash);
+                this.sockets.delete(socket);
             });
     }
 
@@ -1045,34 +1043,24 @@ class Main {
             // saving the socket in the array
             socket.on('open', () => {
                 this.connectSocket(socket);
-                this.sockets.push(socket);
+                // this.sockets.push(socket);
+                this.sockets.add(socket);
                 console.log("Socket connected");
             });
             socket.on('error', error => {
                 console.log(error);
-                this.removeSocket(socket.address.hash);
+                // this.removeSocket(socket.address.hash);
+                socket.close();
+                // this.sockets.delete(socket);
             });
             socket.on('close', (code, reason) => {
                 console.log('peer disconnected', code, reason);
-                this.removeSocket(socket.address.hash);
-                // console.log('sockets length',this.sockets.length, this.sockets);
-                // socket.terminate();
+                // this.removeSocket(socket.address.hash);
+                this.sockets.delete(socket);
             });
     }
 
     removeSocket(peer){
-        this.server.clients.forEach(socket => {
-            if(socket.address.hash === peer || socket.address.url === peer || socket.address.httpurl === peer || socket.address.wsurl === peer){
-                if(this.socket[i].beat){
-                    clearInterval(this.socket[i].beat);
-                }
-                socket.close();
-                // socket.terminate();
-                console.log('removed peer from main broadcast');
-                return true;
-                // break;
-            }
-        });
         for(let i = 0; i < this.sockets.length; i++){
             if(this.sockets[i].address.hash === peer || this.sockets[i].address.url === peer || this.sockets[i].address.httpurl === peer || this.sockets[i].address.wsurl === peer){
                 if(this.sockets[i].beat){
@@ -1201,35 +1189,35 @@ class Main {
         });
     }
 
-    broadcastReply(reply){
-        this.server.clients.forEach(socket => {
-            socket.send(JSON.stringify({
-                type: this.MESSAGE_TYPE.reply,
-                reply: reply
-              }));
-        });
-        this.sockets.forEach(socket => {
-            socket.send(JSON.stringify({
-                type: this.MESSAGE_TYPE.reply,
-                reply: reply
-              }));
-        });
-    }
+    // broadcastReply(reply){
+    //     this.server.clients.forEach(socket => {
+    //         socket.send(JSON.stringify({
+    //             type: this.MESSAGE_TYPE.reply,
+    //             reply: reply
+    //           }));
+    //     });
+    //     this.sockets.forEach(socket => {
+    //         socket.send(JSON.stringify({
+    //             type: this.MESSAGE_TYPE.reply,
+    //             reply: reply
+    //           }));
+    //     });
+    // }
 
-    broadcastInterests(interests){
-        this.server.clients.forEach(socket => {
-            socket.send(JSON.stringify({
-                type: this.MESSAGE_TYPE.interests,
-                interests: interests
-              }));
-        });
-        this.sockets.forEach(socket => {
-            socket.send(JSON.stringify({
-                type: this.MESSAGE_TYPE.interests,
-                interests: interests
-              }));
-        });
-    }
+    // broadcastInterests(interests){
+    //     this.server.clients.forEach(socket => {
+    //         socket.send(JSON.stringify({
+    //             type: this.MESSAGE_TYPE.interests,
+    //             interests: interests
+    //           }));
+    //     });
+    //     this.sockets.forEach(socket => {
+    //         socket.send(JSON.stringify({
+    //             type: this.MESSAGE_TYPE.interests,
+    //             interests: interests
+    //           }));
+    //     });
+    // }
 
     broadcastCategory(category){
         this.server.clients.forEach(socket => {
@@ -1277,14 +1265,14 @@ class Main {
                     // send the data to checkPeer() function to handle the data
                     this.checkMod(data.mod);
                     break;
-                case this.MESSAGE_TYPE.reply:
-                    // send the data to checkPeer() function to handle the data
-                    await this.checkReply(data.reply);
-                    break;
-                case this.MESSAGE_TYPE.interests:
-                    // send the data to checkPeer() function to handle the data
-                    await this.checkInterests(data.interests);
-                    break;
+                // case this.MESSAGE_TYPE.reply:
+                //     // send the data to checkPeer() function to handle the data
+                //     await this.checkReply(data.reply);
+                //     break;
+                // case this.MESSAGE_TYPE.interests:
+                //     // send the data to checkPeer() function to handle the data
+                //     await this.checkInterests(data.interests);
+                //     break;
                 case this.MESSAGE_TYPE.category:
                     // send the data to checkPeer() function to handle the data
                     await this.checkCategory(data.category);
@@ -1303,21 +1291,21 @@ class Main {
         console.log('from peer');
     }
 
-    async checkInterests(interests){
-        let post = await this.getPost(interests.id);
-        if(post){
-            if(!post.interests.includes(interests.username)){
-                post.interests.push(interests.username);
-                if(post.popular !== null){
-                    post.popular = Date.now() - post.popular;
-                } else {
-                    post.popular = Date.now() - post.timestamp;
-                }
-                post.updated = Date.now();
-                post.save();
-            }
-        }
-    }
+    // async checkInterests(interests){
+    //     let post = await this.getPost(interests.id);
+    //     if(post){
+    //         if(!post.interests.includes(interests.username)){
+    //             post.interests.push(interests.username);
+    //             if(post.popular !== null){
+    //                 post.popular = Date.now() - post.popular;
+    //             } else {
+    //                 post.popular = Date.now() - post.timestamp;
+    //             }
+    //             post.updated = Date.now();
+    //             post.save();
+    //         }
+    //     }
+    // }
 
     async checkCategory(category){
         let mainCategory = await this.getCategory(category.id);
