@@ -77,8 +77,8 @@ class Main {
             mod: 'MOD',
             ban: 'BAN',
             post: 'POST',
-            // reply: 'REPLY',
-            // interests: 'INTERESTS',
+            reply: 'REPLY',
+            interests: 'INTERESTS',
             category: 'CATEGORY'
         };
         
@@ -587,7 +587,7 @@ class Main {
                 }
                 post.updated = Date.now();
                 post.save();
-                // this.broadcastReply({peer: this.address, id: post._id, reply: newPost});
+                this.broadcastReply({peer: this.address, id: post._id, reply: newPost});
                 return res.status(200).json(post);
             } else {
                 return res.status(400).json('error');
@@ -608,7 +608,7 @@ class Main {
                     }
                     post.updated = Date.now();
                     post.save();
-                    // this.broadcastInterests({id: post._id, username});
+                    this.broadcastInterests({id: post._id, username});
                     return res.status(200).json(post);
                 }
             } else {
@@ -657,37 +657,37 @@ class Main {
                 }
             }
         
-            // this.checkReply = async (posts) => {
-            //     if(!posts.reply.media){
-            //         let newPost = await this.getPost(posts.id);
-            //         if(newPost){
-            //             newPost.replies.push(posts.reply);
-            //         if(newPost.popular !== null){
-            //             newPost.popular = Date.now() - newPost.popular;
-            //         } else {
-            //             newPost.popular = Date.now() - newPost.timestamp;
-            //         }
-            //         newPost.updated = Date.now();
-            //             newPost.save();
-            //         }
-            //     } else if(posts.reply.media && posts.posts.size < this.sizeLimit){
-            //         let newPost = await this.getPost(posts.id);
-            //         if(newPost){
-            //             newPost.replies.push(posts.reply);
-            //         if(newPost.popular !== null){
-            //             newPost.popular = Date.now() - newPost.popular;
-            //         } else {
-            //             newPost.popular = Date.now() - newPost.timestamp;
-            //         }
-            //         newPost.updated = Date.now();
-            //             newPost.save();
-            //             // if(newPost.media){
-            //             //     this.downFiles(posts.posts.media, posts.peer);
-            //             // }
-            //             this.downFiles(posts.reply.media, posts.peer);
-            //         }
-            //     }
-            // }
+            this.checkReply = async (posts) => {
+                if(!posts.reply.media){
+                    let newPost = await this.getPost(posts.id);
+                    if(newPost){
+                        newPost.replies.push(posts.reply);
+                    if(newPost.popular !== null){
+                        newPost.popular = Date.now() - newPost.popular;
+                    } else {
+                        newPost.popular = Date.now() - newPost.timestamp;
+                    }
+                    newPost.updated = Date.now();
+                        newPost.save();
+                    }
+                } else if(posts.reply.media && posts.posts.size < this.sizeLimit){
+                    let newPost = await this.getPost(posts.id);
+                    if(newPost){
+                        newPost.replies.push(posts.reply);
+                    if(newPost.popular !== null){
+                        newPost.popular = Date.now() - newPost.popular;
+                    } else {
+                        newPost.popular = Date.now() - newPost.timestamp;
+                    }
+                    newPost.updated = Date.now();
+                        newPost.save();
+                        // if(newPost.media){
+                        //     this.downFiles(posts.posts.media, posts.peer);
+                        // }
+                        this.downFiles(posts.reply.media, posts.peer);
+                    }
+                }
+            }
         } else if(this.package === 'choose'){
             this.app.post('/posts', this.upload, this.system, async (req, res) => {
                 let text = req.body.text;
@@ -715,37 +715,37 @@ class Main {
                 }
             }
         
-            // this.checkReply = async (posts) => {
-            //     if(!posts.reply.media){
-            //         let newPost = await this.getPost(posts.id);
-            //         if(newPost){
-            //             newPost.replies.push(posts.reply);
-            //         if(newPost.popular !== null){
-            //             newPost.popular = Date.now() - newPost.popular;
-            //         } else {
-            //             newPost.popular = Date.now() - newPost.timestamp;
-            //         }
-            //         newPost.updated = Date.now();
-            //             newPost.save();
-            //         }
-            //     } else if(posts.reply.media && posts.posts.size < this.sizeLimit){
-            //         let newPost = await this.getPost(posts.id);
-            //         if(newPost){
-            //             newPost.replies.push(posts.reply);
-            //         if(newPost.popular !== null){
-            //             newPost.popular = Date.now() - newPost.popular;
-            //         } else {
-            //             newPost.popular = Date.now() - newPost.timestamp;
-            //         }
-            //         newPost.updated = Date.now();
-            //             newPost.save();
-            //             // if(newPost.media){
-            //             //     this.downFiles(posts.posts.media, posts.peer);
-            //             // }
-            //             this.downFiles(posts.reply.media, posts.peer);
-            //         }
-            //     }
-            // }
+            this.checkReply = async (posts) => {
+                if(!posts.reply.media){
+                    let newPost = await this.getPost(posts.id);
+                    if(newPost){
+                        newPost.replies.push(posts.reply);
+                    if(newPost.popular !== null){
+                        newPost.popular = Date.now() - newPost.popular;
+                    } else {
+                        newPost.popular = Date.now() - newPost.timestamp;
+                    }
+                    newPost.updated = Date.now();
+                        newPost.save();
+                    }
+                } else if(posts.reply.media && posts.posts.size < this.sizeLimit){
+                    let newPost = await this.getPost(posts.id);
+                    if(newPost){
+                        newPost.replies.push(posts.reply);
+                    if(newPost.popular !== null){
+                        newPost.popular = Date.now() - newPost.popular;
+                    } else {
+                        newPost.popular = Date.now() - newPost.timestamp;
+                    }
+                    newPost.updated = Date.now();
+                        newPost.save();
+                        // if(newPost.media){
+                        //     this.downFiles(posts.posts.media, posts.peer);
+                        // }
+                        this.downFiles(posts.reply.media, posts.peer);
+                    }
+                }
+            }
         } else if(this.package === 'unlimited'){
             this.app.post('/posts', this.upload, this.system, async (req, res) => {
                 let text = req.body.text;
@@ -766,25 +766,25 @@ class Main {
                 }
             }
         
-            // this.checkReply = async (posts) => {
-            //     let newPost = await this.getPost(posts.id);
-            //     if(newPost){
-            //         newPost.replies.push(posts.reply);
-            //         if(newPost.popular !== null){
-            //             newPost.popular = Date.now() - newPost.popular;
-            //         } else {
-            //             newPost.popular = Date.now() - newPost.timestamp;
-            //         }
-            //         newPost.updated = Date.now();
-            //         newPost.save();
-            //         // if(newPost.media){
-            //         //     this.downFiles(posts.posts.media, posts.peer);
-            //         // }
-            //         if(posts.reply.media){
-            //             this.downFiles(posts.reply.media, posts.peer);
-            //         }
-            //     }
-            // }
+            this.checkReply = async (posts) => {
+                let newPost = await this.getPost(posts.id);
+                if(newPost){
+                    newPost.replies.push(posts.reply);
+                    if(newPost.popular !== null){
+                        newPost.popular = Date.now() - newPost.popular;
+                    } else {
+                        newPost.popular = Date.now() - newPost.timestamp;
+                    }
+                    newPost.updated = Date.now();
+                    newPost.save();
+                    // if(newPost.media){
+                    //     this.downFiles(posts.posts.media, posts.peer);
+                    // }
+                    if(posts.reply.media){
+                        this.downFiles(posts.reply.media, posts.peer);
+                    }
+                }
+            }
         }
         this.app.get('*', (req, res) => {
             return res.status(200).json('not found');
@@ -1189,35 +1189,35 @@ class Main {
         });
     }
 
-    // broadcastReply(reply){
-    //     this.server.clients.forEach(socket => {
-    //         socket.send(JSON.stringify({
-    //             type: this.MESSAGE_TYPE.reply,
-    //             reply: reply
-    //           }));
-    //     });
-    //     this.sockets.forEach(socket => {
-    //         socket.send(JSON.stringify({
-    //             type: this.MESSAGE_TYPE.reply,
-    //             reply: reply
-    //           }));
-    //     });
-    // }
+    broadcastReply(reply){
+        this.server.clients.forEach(socket => {
+            socket.send(JSON.stringify({
+                type: this.MESSAGE_TYPE.reply,
+                reply: reply
+              }));
+        });
+        this.sockets.forEach(socket => {
+            socket.send(JSON.stringify({
+                type: this.MESSAGE_TYPE.reply,
+                reply: reply
+              }));
+        });
+    }
 
-    // broadcastInterests(interests){
-    //     this.server.clients.forEach(socket => {
-    //         socket.send(JSON.stringify({
-    //             type: this.MESSAGE_TYPE.interests,
-    //             interests: interests
-    //           }));
-    //     });
-    //     this.sockets.forEach(socket => {
-    //         socket.send(JSON.stringify({
-    //             type: this.MESSAGE_TYPE.interests,
-    //             interests: interests
-    //           }));
-    //     });
-    // }
+    broadcastInterests(interests){
+        this.server.clients.forEach(socket => {
+            socket.send(JSON.stringify({
+                type: this.MESSAGE_TYPE.interests,
+                interests: interests
+              }));
+        });
+        this.sockets.forEach(socket => {
+            socket.send(JSON.stringify({
+                type: this.MESSAGE_TYPE.interests,
+                interests: interests
+              }));
+        });
+    }
 
     broadcastCategory(category){
         this.server.clients.forEach(socket => {
@@ -1265,14 +1265,14 @@ class Main {
                     // send the data to checkPeer() function to handle the data
                     this.checkMod(data.mod);
                     break;
-                // case this.MESSAGE_TYPE.reply:
-                //     // send the data to checkPeer() function to handle the data
-                //     await this.checkReply(data.reply);
-                //     break;
-                // case this.MESSAGE_TYPE.interests:
-                //     // send the data to checkPeer() function to handle the data
-                //     await this.checkInterests(data.interests);
-                //     break;
+                case this.MESSAGE_TYPE.reply:
+                    // send the data to checkPeer() function to handle the data
+                    await this.checkReply(data.reply);
+                    break;
+                case this.MESSAGE_TYPE.interests:
+                    // send the data to checkPeer() function to handle the data
+                    await this.checkInterests(data.interests);
+                    break;
                 case this.MESSAGE_TYPE.category:
                     // send the data to checkPeer() function to handle the data
                     await this.checkCategory(data.category);
@@ -1291,21 +1291,21 @@ class Main {
         console.log('from peer');
     }
 
-    // async checkInterests(interests){
-    //     let post = await this.getPost(interests.id);
-    //     if(post){
-    //         if(!post.interests.includes(interests.username)){
-    //             post.interests.push(interests.username);
-    //             if(post.popular !== null){
-    //                 post.popular = Date.now() - post.popular;
-    //             } else {
-    //                 post.popular = Date.now() - post.timestamp;
-    //             }
-    //             post.updated = Date.now();
-    //             post.save();
-    //         }
-    //     }
-    // }
+    async checkInterests(interests){
+        let post = await this.getPost(interests.id);
+        if(post){
+            if(!post.interests.includes(interests.username)){
+                post.interests.push(interests.username);
+                if(post.popular !== null){
+                    post.popular = Date.now() - post.popular;
+                } else {
+                    post.popular = Date.now() - post.timestamp;
+                }
+                post.updated = Date.now();
+                post.save();
+            }
+        }
+    }
 
     async checkCategory(category){
         let mainCategory = await this.getCategory(category.id);
